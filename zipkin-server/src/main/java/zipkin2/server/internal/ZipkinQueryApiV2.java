@@ -29,6 +29,7 @@ import com.linecorp.armeria.server.annotation.Param;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
@@ -37,6 +38,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import zipkin2.Call;
@@ -52,6 +55,7 @@ import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
 import static com.linecorp.armeria.common.HttpStatus.NOT_FOUND;
 import static com.linecorp.armeria.common.MediaType.ANY_TEXT_TYPE;
 
+@Slf4j
 @ConditionalOnProperty(name = "zipkin.query.enabled", matchIfMissing = true)
 @ExceptionHandler(BodyIsExceptionMessage.class)
 public class ZipkinQueryApiV2 {
@@ -79,6 +83,8 @@ public class ZipkinQueryApiV2 {
     this.defaultLookback = defaultLookback;
     this.namesMaxAge = namesMaxAge;
     this.autocompleteKeys = autocompleteKeys;
+
+    log.info("storage={};storageType={};defaultLookback={};namesMaxAge={};autocompleteKeys={};", storage, storageType, namesMaxAge, autocompleteKeys);
   }
 
   @Get("/api/v2/dependencies")
@@ -88,7 +94,9 @@ public class ZipkinQueryApiV2 {
     @Param("lookback") Optional<Long> lookback) throws IOException {
     Call<List<DependencyLink>> call =
       storage.spanStore().getDependencies(endTs, lookback.orElse(defaultLookback));
-    return jsonResponse(DependencyLinkBytesEncoder.JSON_V1.encodeList(call.execute()));
+    AggregatedHttpResponse aggregatedHttpResponse = jsonResponse(DependencyLinkBytesEncoder.JSON_V1.encodeList(call.execute()));
+    log.info("endTs={};lookback={};aggregatedHttpResponse={};", endTs, lookback, aggregatedHttpResponse);
+    return aggregatedHttpResponse;
   }
 
   @Get("/api/v2/services")
@@ -96,7 +104,9 @@ public class ZipkinQueryApiV2 {
   public AggregatedHttpResponse getServiceNames(ServiceRequestContext ctx) throws IOException {
     List<String> serviceNames = storage.serviceAndSpanNames().getServiceNames().execute();
     serviceCount = serviceNames.size();
-    return maybeCacheNames(serviceCount > 3, serviceNames, ctx.alloc());
+    AggregatedHttpResponse aggregatedHttpResponse = maybeCacheNames(serviceCount > 3, serviceNames, ctx.alloc());
+    log.info("serviceNames={};aggregatedHttpResponse={};", serviceNames, aggregatedHttpResponse);
+    return aggregatedHttpResponse;
   }
 
   @Get("/api/v2/spans")
@@ -105,7 +115,9 @@ public class ZipkinQueryApiV2 {
     @Param("serviceName") String serviceName, ServiceRequestContext ctx)
     throws IOException {
     List<String> spanNames = storage.serviceAndSpanNames().getSpanNames(serviceName).execute();
-    return maybeCacheNames(serviceCount > 3, spanNames, ctx.alloc());
+    AggregatedHttpResponse aggregatedHttpResponse = maybeCacheNames(serviceCount > 3, spanNames, ctx.alloc());
+    log.info("serviceName={};aggregatedHttpResponse={};", serviceName, aggregatedHttpResponse);
+    return aggregatedHttpResponse;
   }
 
   @Get("/api/v2/remoteServices")
@@ -115,7 +127,9 @@ public class ZipkinQueryApiV2 {
     throws IOException {
     List<String> remoteServiceNames =
       storage.serviceAndSpanNames().getRemoteServiceNames(serviceName).execute();
-    return maybeCacheNames(serviceCount > 3, remoteServiceNames, ctx.alloc());
+    AggregatedHttpResponse aggregatedHttpResponse = maybeCacheNames(serviceCount > 3, remoteServiceNames, ctx.alloc());
+    log.info("serviceName={};aggregatedHttpResponse={};", serviceName, aggregatedHttpResponse);
+    return aggregatedHttpResponse;
   }
 
   @Get("/api/v2/traces")
@@ -145,7 +159,11 @@ public class ZipkinQueryApiV2 {
         .build();
 
     List<List<Span>> traces = storage.spanStore().getTraces(queryRequest).execute();
-    return jsonResponse(writeTraces(SpanBytesEncoder.JSON_V2, traces));
+    AggregatedHttpResponse aggregatedHttpResponse = jsonResponse(writeTraces(SpanBytesEncoder.JSON_V2, traces));
+
+    log.info("serviceName={};remoteServiceName={};spanName={};annotationQuery={};minDuration={};maxDuration={};endTs={};lookback={};limit={};traces={};aggregatedHttpResponse={};",
+      serviceName, remoteServiceName, spanName, annotationQuery, minDuration, maxDuration, endTs, lookback, limit, traces, aggregatedHttpResponse);
+    return aggregatedHttpResponse;
   }
 
   @Get("/api/v2/trace/{traceId}")
@@ -154,6 +172,7 @@ public class ZipkinQueryApiV2 {
     traceId = traceId != null ? traceId.trim() : null;
     traceId = Span.normalizeTraceId(traceId);
     List<Span> trace = storage.traces().getTrace(traceId).execute();
+    log.info("traceId={};trace={};", traceId, trace);
     if (trace.isEmpty()) {
       return AggregatedHttpResponse.of(NOT_FOUND, ANY_TEXT_TYPE, traceId + " not found");
     }
@@ -191,7 +210,9 @@ public class ZipkinQueryApiV2 {
   @Get("/api/v2/autocompleteKeys")
   @Blocking
   public AggregatedHttpResponse getAutocompleteKeys(ServiceRequestContext ctx) {
-    return maybeCacheNames(true, autocompleteKeys, ctx.alloc());
+    AggregatedHttpResponse aggregatedHttpResponse = maybeCacheNames(true, autocompleteKeys, ctx.alloc());
+    log.info("ctx={};aggregatedHttpResponse={};", ctx, aggregatedHttpResponse);
+    return aggregatedHttpResponse;
   }
 
   @Get("/api/v2/autocompleteValues")
@@ -199,7 +220,9 @@ public class ZipkinQueryApiV2 {
   public AggregatedHttpResponse getAutocompleteValues(
     @Param("key") String key, ServiceRequestContext ctx) throws IOException {
     List<String> values = storage.autocompleteTags().getValues(key).execute();
-    return maybeCacheNames(values.size() > 3, values, ctx.alloc());
+    AggregatedHttpResponse aggregatedHttpResponse = maybeCacheNames(values.size() > 3, values, ctx.alloc());
+    log.info("key={};ctx={};aggregatedHttpResponse={};", key, ctx, aggregatedHttpResponse);
+    return aggregatedHttpResponse;
   }
 
   /**

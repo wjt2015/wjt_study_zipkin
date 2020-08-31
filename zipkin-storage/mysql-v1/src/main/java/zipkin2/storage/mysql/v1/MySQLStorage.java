@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import javax.sql.DataSource;
+
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.ExecuteListenerProvider;
 import org.jooq.conf.Settings;
 import zipkin2.Call;
@@ -35,6 +37,7 @@ import static zipkin2.storage.mysql.v1.internal.generated.tables.ZipkinAnnotatio
 import static zipkin2.storage.mysql.v1.internal.generated.tables.ZipkinDependencies.ZIPKIN_DEPENDENCIES;
 import static zipkin2.storage.mysql.v1.internal.generated.tables.ZipkinSpans.ZIPKIN_SPANS;
 
+@Slf4j
 public final class MySQLStorage extends StorageComponent {
   public static Builder newBuilder() {
     return new Builder();
@@ -48,17 +51,20 @@ public final class MySQLStorage extends StorageComponent {
     private Executor executor;
     List<String> autocompleteKeys = new ArrayList<>();
 
-    @Override public Builder strictTraceId(boolean strictTraceId) {
+    @Override
+    public Builder strictTraceId(boolean strictTraceId) {
       this.strictTraceId = strictTraceId;
       return this;
     }
 
-    @Override public Builder searchEnabled(boolean searchEnabled) {
+    @Override
+    public Builder searchEnabled(boolean searchEnabled) {
       this.searchEnabled = searchEnabled;
       return this;
     }
 
-    @Override public Builder autocompleteKeys(List<String> keys) {
+    @Override
+    public Builder autocompleteKeys(List<String> keys) {
       if (keys == null) throw new NullPointerException("keys == null");
       this.autocompleteKeys = keys;
       return this;
@@ -87,7 +93,8 @@ public final class MySQLStorage extends StorageComponent {
       return this;
     }
 
-    @Override public MySQLStorage build() {
+    @Override
+    public MySQLStorage build() {
       return new MySQLStorage(this);
     }
 
@@ -118,12 +125,16 @@ public final class MySQLStorage extends StorageComponent {
     autocompleteKeys = builder.autocompleteKeys;
   }
 
-  /** Returns the session in use by this storage component. */
+  /**
+   * Returns the session in use by this storage component.
+   */
   public DataSource datasource() {
     return datasource;
   }
 
-  /** Lazy to avoid eager I/O */
+  /**
+   * Lazy to avoid eager I/O
+   */
   Schema schema() {
     if (schema == null) {
       synchronized (this) {
@@ -135,27 +146,33 @@ public final class MySQLStorage extends StorageComponent {
     return schema;
   }
 
-  @Override public SpanStore spanStore() {
+  @Override
+  public SpanStore spanStore() {
     return new MySQLSpanStore(this, schema());
   }
 
-  @Override public Traces traces() {
+  @Override
+  public Traces traces() {
     return (Traces) spanStore();
   }
 
-  @Override public ServiceAndSpanNames serviceAndSpanNames() {
+  @Override
+  public ServiceAndSpanNames serviceAndSpanNames() {
     return (ServiceAndSpanNames) spanStore();
   }
 
-  @Override public AutocompleteTags autocompleteTags() {
+  @Override
+  public AutocompleteTags autocompleteTags() {
     return new MySQLAutocompleteTags(this, schema());
   }
 
-  @Override public SpanConsumer spanConsumer() {
+  @Override
+  public SpanConsumer spanConsumer() {
     return new MySQLSpanConsumer(dataSourceCallFactory, schema());
   }
 
-  @Override public CheckResult check() {
+  @Override
+  public CheckResult check() {
     try (Connection conn = datasource.getConnection()) {
       context.get(conn).select(ZIPKIN_SPANS.TRACE_ID).from(ZIPKIN_SPANS).limit(1).execute();
     } catch (Throwable e) {
@@ -165,15 +182,19 @@ public final class MySQLStorage extends StorageComponent {
     return CheckResult.OK;
   }
 
-  @Override public final String toString() {
+  @Override
+  public final String toString() {
     return "MySQLStorage{datasource=" + datasource + "}";
   }
 
-  @Override public void close() {
+  @Override
+  public void close() {
     // didn't open the DataSource or executor
   }
 
-  /** Visible for testing */
+  /**
+   * Visible for testing
+   */
   void clear() {
     try (Connection conn = datasource.getConnection()) {
       context.get(conn).truncate(ZIPKIN_SPANS).execute();

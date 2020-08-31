@@ -3,6 +3,19 @@
 
 https://zipkin.io/pages/quickstart
 https://github.com/openzipkin/zipkin
+###
+Running from Source
+Zipkin can be run from source if you are developing new features. To achieve this, you’ll need to get Zipkin’s source and build it.
+
+# get the latest source
+git clone https://github.com/openzipkin/zipkin
+cd zipkin
+# Build the server and also make its dependencies
+./mvnw -DskipTests --also-make -pl zipkin-server clean install
+# Run the server
+java -jar ./zipkin-server/target/zipkin-server-*exec.jar
+Stop by and socialize with us on gitter, if you end up making something interesting!
+###
 
 
 [![Gitter chat](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg)](https://gitter.im/openzipkin/zipkin)

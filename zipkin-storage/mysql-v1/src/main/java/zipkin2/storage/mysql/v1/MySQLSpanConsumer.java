@@ -19,6 +19,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+
+import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
 import org.jooq.InsertSetMoreStep;
 import org.jooq.Query;
@@ -38,6 +40,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static zipkin2.storage.mysql.v1.internal.generated.tables.ZipkinAnnotations.ZIPKIN_ANNOTATIONS;
 import static zipkin2.storage.mysql.v1.internal.generated.tables.ZipkinSpans.ZIPKIN_SPANS;
 
+@Slf4j
 final class MySQLSpanConsumer implements SpanConsumer {
   static final byte[] ONE = {1};
 
@@ -47,6 +50,7 @@ final class MySQLSpanConsumer implements SpanConsumer {
   MySQLSpanConsumer(DataSourceCall.Factory dataSourceCallFactory, Schema schema) {
     this.dataSourceCallFactory = dataSourceCallFactory;
     this.schema = schema;
+    log.info("dataSourceCallFactory={};schema={};", dataSourceCallFactory, schema);
   }
 
   @Override
@@ -77,11 +81,11 @@ final class MySQLSpanConsumer implements SpanConsumer {
 
         long traceId, spanId;
         InsertSetMoreStep<Record> insertSpan =
-            create
-                .insertInto(ZIPKIN_SPANS)
-                .set(ZIPKIN_SPANS.TRACE_ID, traceId = v1Span.traceId())
-                .set(ZIPKIN_SPANS.ID, spanId = v1Span.id())
-                .set(ZIPKIN_SPANS.DEBUG, v1Span.debug());
+          create
+            .insertInto(ZIPKIN_SPANS)
+            .set(ZIPKIN_SPANS.TRACE_ID, traceId = v1Span.traceId())
+            .set(ZIPKIN_SPANS.ID, spanId = v1Span.id())
+            .set(ZIPKIN_SPANS.DEBUG, v1Span.debug());
 
         Map<TableField<Record, ?>, Object> updateFields = new LinkedHashMap<>();
         if (timestamp != 0L) {
@@ -113,21 +117,21 @@ final class MySQLSpanConsumer implements SpanConsumer {
         }
 
         inserts.add(
-            updateFields.isEmpty()
-                ? insertSpan.onDuplicateKeyIgnore()
-                : insertSpan.onDuplicateKeyUpdate().set(updateFields));
+          updateFields.isEmpty()
+            ? insertSpan.onDuplicateKeyIgnore()
+            : insertSpan.onDuplicateKeyUpdate().set(updateFields));
 
         int ipv4 =
-            ep != null && ep.ipv4Bytes() != null ? ByteBuffer.wrap(ep.ipv4Bytes()).getInt() : 0;
+          ep != null && ep.ipv4Bytes() != null ? ByteBuffer.wrap(ep.ipv4Bytes()).getInt() : 0;
         for (V1Annotation a : v1Span.annotations()) {
           InsertSetMoreStep<Record> insert =
-              create
-                  .insertInto(ZIPKIN_ANNOTATIONS)
-                  .set(ZIPKIN_ANNOTATIONS.TRACE_ID, traceId)
-                  .set(ZIPKIN_ANNOTATIONS.SPAN_ID, spanId)
-                  .set(ZIPKIN_ANNOTATIONS.A_KEY, a.value())
-                  .set(ZIPKIN_ANNOTATIONS.A_TYPE, -1)
-                  .set(ZIPKIN_ANNOTATIONS.A_TIMESTAMP, a.timestamp());
+            create
+              .insertInto(ZIPKIN_ANNOTATIONS)
+              .set(ZIPKIN_ANNOTATIONS.TRACE_ID, traceId)
+              .set(ZIPKIN_ANNOTATIONS.SPAN_ID, spanId)
+              .set(ZIPKIN_ANNOTATIONS.A_KEY, a.value())
+              .set(ZIPKIN_ANNOTATIONS.A_TYPE, -1)
+              .set(ZIPKIN_ANNOTATIONS.A_TIMESTAMP, a.timestamp());
           if (traceIdHigh != 0L) {
             insert.set(ZIPKIN_ANNOTATIONS.TRACE_ID_HIGH, traceIdHigh);
           }
@@ -137,13 +141,13 @@ final class MySQLSpanConsumer implements SpanConsumer {
 
         for (V1BinaryAnnotation ba : v1Span.binaryAnnotations()) {
           InsertSetMoreStep<Record> insert =
-              create
-                  .insertInto(ZIPKIN_ANNOTATIONS)
-                  .set(ZIPKIN_ANNOTATIONS.TRACE_ID, traceId)
-                  .set(ZIPKIN_ANNOTATIONS.SPAN_ID, spanId)
-                  .set(ZIPKIN_ANNOTATIONS.A_KEY, ba.key())
-                  .set(ZIPKIN_ANNOTATIONS.A_TYPE, ba.type())
-                  .set(ZIPKIN_ANNOTATIONS.A_TIMESTAMP, timestamp);
+            create
+              .insertInto(ZIPKIN_ANNOTATIONS)
+              .set(ZIPKIN_ANNOTATIONS.TRACE_ID, traceId)
+              .set(ZIPKIN_ANNOTATIONS.SPAN_ID, spanId)
+              .set(ZIPKIN_ANNOTATIONS.A_KEY, ba.key())
+              .set(ZIPKIN_ANNOTATIONS.A_TYPE, ba.type())
+              .set(ZIPKIN_ANNOTATIONS.A_TIMESTAMP, timestamp);
           if (traceIdHigh != 0) {
             insert.set(ZIPKIN_ANNOTATIONS.TRACE_ID_HIGH, traceIdHigh);
           }
@@ -154,9 +158,9 @@ final class MySQLSpanConsumer implements SpanConsumer {
             insert.set(ZIPKIN_ANNOTATIONS.A_VALUE, ONE);
             Endpoint nextEp = ba.endpoint();
             addEndpoint(
-                insert,
-                nextEp,
-                nextEp.ipv4Bytes() != null ? ByteBuffer.wrap(nextEp.ipv4Bytes()).getInt() : 0);
+              insert,
+              nextEp,
+              nextEp.ipv4Bytes() != null ? ByteBuffer.wrap(nextEp.ipv4Bytes()).getInt() : 0);
           }
           inserts.add(insert.onDuplicateKeyIgnore());
         }
@@ -190,7 +194,7 @@ final class MySQLSpanConsumer implements SpanConsumer {
   }
 
   static void updateName(@Nullable String name, TableField<Record, String> column,
-    InsertSetMoreStep<Record> insertSpan, Map<TableField<Record, ?>, Object> updateFields) {
+                         InsertSetMoreStep<Record> insertSpan, Map<TableField<Record, ?>, Object> updateFields) {
     if (name != null && !name.equals("unknown")) {
       insertSpan.set(column, name);
       updateFields.put(column, name);
