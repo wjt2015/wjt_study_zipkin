@@ -251,7 +251,7 @@ spring:
       - org.springframework.boot.autoconfigure.task.TaskSchedulingAutoConfiguration
 logging:
   pattern:
-    level: "%clr(%5p) %clr([%X{traceId}/%X{spanId}]){yellow}"
+    level: "%clr(%5p) %clr(%C:%method:%L) %clr([%X{traceId}/%X{spanId}]){yellow}"
   level:
     # 'modern compatibility layer' of Guava, and this will be gone in v4
     com.datastax.driver.core.GuavaCompatibility: 'WARN'

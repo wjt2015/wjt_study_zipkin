@@ -21,6 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import zipkin2.Callback;
@@ -31,6 +33,7 @@ import zipkin2.collector.CollectorSampler;
 import zipkin2.storage.StorageComponent;
 
 /** Collector for receiving spans on a gRPC endpoint. */
+@Slf4j
 @ConditionalOnProperty(name = "zipkin.collector.grpc.enabled") // disabled by default
 final class ZipkinGrpcCollector {
 
