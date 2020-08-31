@@ -58,10 +58,18 @@
           </exclusion>
         </exclusions>
       </dependency>
+
+
     </dependencies>
   </dependencyManagement>
 
   <dependencies>
+
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter</artifactId>
@@ -137,6 +145,8 @@
       <artifactId>slf4j-simple</artifactId>
       <scope>provided</scope>
     </dependency>
+
+
 
     <!-- Optional, but packaged in the supported distribution -->
 

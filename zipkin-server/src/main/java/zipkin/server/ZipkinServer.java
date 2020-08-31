@@ -13,6 +13,7 @@
  */
 package zipkin.server;
 
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -36,6 +37,7 @@ import zipkin2.server.internal.banner.ZipkinBanner;
  *       stackdriver: zipkin.module.storage.stackdriver.ZipkinStackdriverStorageModule
  * }</pre>
  */
+@Slf4j
 @SpringBootConfiguration
 @EnableAutoConfiguration
 @EnableZipkinServer
@@ -54,5 +56,7 @@ public class ZipkinServer {
       .properties(
         EnableAutoConfiguration.ENABLED_OVERRIDE_PROPERTY + "=false",
         "spring.config.name=zipkin-server").run(args);
+    log.info("main_finish!args={};", args);
+
   }
 }
